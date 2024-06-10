@@ -10,7 +10,6 @@ import xml.etree.ElementTree as ET
 import dill as pickle
 
 
-
 def transform_data():
     def get_train_aug():
         return A.Compose([
@@ -93,13 +92,23 @@ def transform_data():
             image_height = image.shape[0]
     
             # Box coordinates for XML files are extracted and corrected for image size given
-            for member in root.findall('object'):
-                labels.append(self.classes.index(member.find('name').text))
-                bndbox = member.find('bndbox')
-                xmin = float(bndbox.find('xmin').text)
-                ymin = float(bndbox.find('ymin').text)
-                xmax = float(bndbox.find('xmax').text)
-                ymax = float(bndbox.find('ymax').text)
+            for member in root.findall('annotation'):
+                class_name = member.find('class_name').text
+                labels.append(self.classes.index(class_name))
+                
+                x_min = member.find('x_min').text
+                y_min = member.find('y_min').text
+                x_max = member.find('x_max').text
+                y_max = member.find('y_max').text
+                
+                if any(val == 'nan' for val in [x_min, y_min, x_max, y_max]):
+                    # Skip this bounding box if any value is 'nan'
+                    continue
+
+                xmin = float(x_min)
+                ymin = float(y_min)
+                xmax = float(x_max)
+                ymax = float(y_max)
     
                 # Resize the bounding boxes
                 xmin_final = (xmin / image_width) * self.width
@@ -112,8 +121,8 @@ def transform_data():
             # Bounding box to tensor
             boxes = torch.as_tensor(boxes, dtype=torch.float32)
             # Area of the bounding boxes
-            if len(boxes.size()) == 1:
-                area = torch.tensor([0.0], dtype=torch.float32)
+            if boxes.nelement() == 0:
+                area = torch.tensor([], dtype=torch.float32)
             else:
                 area = (boxes[:, 3] - boxes[:, 1]) * (boxes[:, 2] - boxes[:, 0])
             # No crowd instances
@@ -149,7 +158,7 @@ def transform_data():
     
     IMAGE_WIDTH = 800
     IMAGE_HEIGHT = 680
-    classes = ['Aortic enlargement', 'Atelectasis', 'Calcification', 'Cardiomegaly', 'Consolidation', 'ILD', 'Infiltration', 'Lung Opacity', 'Nodule/Mass', 'Other lesion', 'Pleural effusion', 'Pleural thickening', 'Pneumothorax', 'Pulmonary fibrosis']
+    classes = ['Aortic enlargement', 'Atelectasis', 'Calcification', 'Cardiomegaly', 'Consolidation', 'ILD', 'Infiltration', 'Lung Opacity', 'Nodule/Mass', 'Other lesion', 'Pleural effusion', 'Pleural thickening', 'Pneumothorax', 'Pulmonary fibrosis', 'No finding']
 
     train_dataset = CustomDataset(
         images_path=os.path.join(os.getcwd(), "organized_images/train/images"),
@@ -173,8 +182,8 @@ def transform_data():
 
     if len(train_dataset) > 0:
         print(train_dataset)
-        i, a = train_dataset[2]
-        print("Sample Image:", i)
+        i, a = train_dataset[7]
+        print("Sample Image:", i.shape)
         print("Sample Annotations:", a)
     else:
         print("Train dataset is empty.")
