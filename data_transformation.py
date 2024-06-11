@@ -90,33 +90,22 @@ def transform_data():
             # Get the height and width of the image
             image_width = image.shape[1]
             image_height = image.shape[0]
-    
-            # Box coordinates for XML files are extracted and corrected for image size given
-            for member in root.findall('annotation'):
-                class_name = member.find('class_name').text
-                labels.append(self.classes.index(class_name))
-                
-                x_min = member.find('x_min').text
-                y_min = member.find('y_min').text
-                x_max = member.find('x_max').text
-                y_max = member.find('y_max').text
-                
-                if any(val == 'nan' for val in [x_min, y_min, x_max, y_max]):
-                    # Skip this bounding box if any value is 'nan'
-                    continue
+            
+            class_name = root.find('class_name').text
+            labels.append(self.classes.index(class_name))
+            
+            x_min = float(root.find('x_min').text)
+            y_min = float(root.find('y_min').text)
+            x_max = float(root.find('x_max').text)
+            y_max = float(root.find('y_max').text)
 
-                xmin = float(x_min)
-                ymin = float(y_min)
-                xmax = float(x_max)
-                ymax = float(y_max)
-    
-                # Resize the bounding boxes
-                xmin_final = (xmin / image_width) * self.width
-                xmax_final = (xmax / image_width) * self.width
-                ymin_final = (ymin / image_height) * self.height
-                ymax_final = (ymax / image_height) * self.height
-    
-                boxes.append([xmin_final, ymin_final, xmax_final, ymax_final])
+            # Normalize the bounding boxes
+            xmin_final = x_min / image_width
+            xmax_final = x_max / image_width
+            ymin_final = y_min / image_height
+            ymax_final = y_max / image_height
+
+            boxes.append([xmin_final, ymin_final, xmax_final, ymax_final])
     
             # Bounding box to tensor
             boxes = torch.as_tensor(boxes, dtype=torch.float32)
