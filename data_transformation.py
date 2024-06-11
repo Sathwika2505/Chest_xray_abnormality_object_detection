@@ -32,10 +32,6 @@ def transform_data():
             ToTensorV2(p=1.0),
         ], bbox_params=A.BboxParams(format='pascal_voc', label_fields=['labels']))
 
-    def replace_nan_with_zero(tensor):
-        """Replace NaN values in a tensor with 0."""
-        return torch.nan_to_num(tensor, nan=0.0)
-
     class CustomDataset(Dataset):
         def __init__(self, images_path, labels_path, width, height, classes, transforms=None, use_train_aug=False, train=False, mosaic=False):
             self.transforms = transforms
@@ -75,8 +71,7 @@ def transform_data():
                 return None, None, [], [], [], [], (0, 0)
     
             image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB).astype(np.float32)
-            image_resized = cv2.resize(image, (self.width, self.height))
-            image_resized /= 255.0
+            image /= 255.0
     
             # Capture the corresponding XML file for getting the annotations
             annot_filename = image_name[:-4] + '.xml'
@@ -84,7 +79,7 @@ def transform_data():
     
             if not os.path.exists(annot_file_path):
                 print(f"Annotation file {annot_file_path} does not exist")
-                return image, image_resized, [], [], [], [], (0, 0)
+                return image, [], [], [], [], (0, 0)
     
             boxes = []
             labels = []
@@ -98,38 +93,34 @@ def transform_data():
             class_name = root.find('class_name').text
             labels.append(self.classes.index(class_name))
             
-            x_min = float(root.find('x_min').text)
-            y_min = float(root.find('y_min').text)
-            x_max = float(root.find('x_max').text)
-            y_max = float(root.find('y_max').text)
+            x_min = root.find('x_min').text
+            y_min = root.find('y_min').text
+            x_max = root.find('x_max').text
+            y_max = root.find('y_max').text
 
-            # Normalize the bounding boxes
-            xmin_final = x_min / image_width
-            xmax_final = x_max / image_width
-            ymin_final = y_min / image_height
-            ymax_final = y_max / image_height
+            xmin = float(x_min) / image_width
+            ymin = float(y_min) / image_height
+            xmax = float(x_max) / image_width
+            ymax = float(y_max) / image_height
 
-            boxes.append([xmin_final, ymin_final, xmax_final, ymax_final])
+            if not (np.isnan(xmin) or np.isnan(xmax) or np.isnan(ymin) or np.isnan(ymax)):
+                boxes.append([xmin, ymin, xmax, ymax])
     
             # Bounding box to tensor
             boxes = torch.as_tensor(boxes, dtype=torch.float32)
-            # Replace NaN values in boxes tensor
-            boxes = replace_nan_with_zero(boxes)
             # Area of the bounding boxes
             if boxes.nelement() == 0:
                 area = torch.tensor([], dtype=torch.float32)
             else:
                 area = (boxes[:, 3] - boxes[:, 1]) * (boxes[:, 2] - boxes[:, 0])
-            # Replace NaN values in area tensor
-            area = replace_nan_with_zero(area)
             # No crowd instances
             iscrowd = torch.zeros((boxes.shape[0],), dtype=torch.int64)
             # Labels to tensor
             labels = torch.as_tensor(labels, dtype=torch.int64)
-            return image, image_resized, boxes, labels, area, iscrowd, (image_width, image_height)
+            return image, boxes, labels, area, iscrowd, (image_width, image_height)
     
         def __getitem__(self, idx):
-            image, image_resized, boxes, labels, area, iscrowd, dims = self.load_image_and_labels(index=idx)
+            image, boxes, labels, area, iscrowd, dims = self.load_image_and_labels(index=idx)
     
             target = {}
             target["boxes"] = boxes
@@ -140,21 +131,15 @@ def transform_data():
     
             if self.use_train_aug:
                 train_aug = get_train_aug()
-                sample = train_aug(image=image_resized, bboxes=target['boxes'], labels=labels)
-                image_resized = sample['image']
+                sample = train_aug(image=image, bboxes=target['boxes'], labels=labels)
+                image = sample['image']
                 target['boxes'] = torch.Tensor(sample['bboxes'])
             else:
-                sample = self.transforms(image=image_resized, bboxes=target['boxes'], labels=labels)
-                image_resized = sample['image']
+                sample = self.transforms(image=image, bboxes=target['boxes'], labels=labels)
+                image = sample['image']
                 target['boxes'] = torch.Tensor(sample['bboxes'])
     
-            # Replace NaN values in target tensors
-            target["boxes"] = replace_nan_with_zero(target["boxes"])
-            target["labels"] = replace_nan_with_zero(target["labels"])
-            target["area"] = replace_nan_with_zero(target["area"])
-            target["iscrowd"] = replace_nan_with_zero(target["iscrowd"])
-    
-            return image_resized, target
+            return image, target
     
         def __len__(self):
             return len(self.all_images)
