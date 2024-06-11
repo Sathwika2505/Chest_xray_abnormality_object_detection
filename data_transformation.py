@@ -32,6 +32,10 @@ def transform_data():
             ToTensorV2(p=1.0),
         ], bbox_params=A.BboxParams(format='pascal_voc', label_fields=['labels']))
 
+    def replace_nan_with_zero(tensor):
+        """Replace NaN values in a tensor with 0."""
+        return torch.nan_to_num(tensor, nan=0.0)
+
     class CustomDataset(Dataset):
         def __init__(self, images_path, labels_path, width, height, classes, transforms=None, use_train_aug=False, train=False, mosaic=False):
             self.transforms = transforms
@@ -109,11 +113,15 @@ def transform_data():
     
             # Bounding box to tensor
             boxes = torch.as_tensor(boxes, dtype=torch.float32)
+            # Replace NaN values in boxes tensor
+            boxes = replace_nan_with_zero(boxes)
             # Area of the bounding boxes
             if boxes.nelement() == 0:
                 area = torch.tensor([], dtype=torch.float32)
             else:
                 area = (boxes[:, 3] - boxes[:, 1]) * (boxes[:, 2] - boxes[:, 0])
+            # Replace NaN values in area tensor
+            area = replace_nan_with_zero(area)
             # No crowd instances
             iscrowd = torch.zeros((boxes.shape[0],), dtype=torch.int64)
             # Labels to tensor
@@ -139,6 +147,12 @@ def transform_data():
                 sample = self.transforms(image=image_resized, bboxes=target['boxes'], labels=labels)
                 image_resized = sample['image']
                 target['boxes'] = torch.Tensor(sample['bboxes'])
+    
+            # Replace NaN values in target tensors
+            target["boxes"] = replace_nan_with_zero(target["boxes"])
+            target["labels"] = replace_nan_with_zero(target["labels"])
+            target["area"] = replace_nan_with_zero(target["area"])
+            target["iscrowd"] = replace_nan_with_zero(target["iscrowd"])
     
             return image_resized, target
     
