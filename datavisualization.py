@@ -47,7 +47,8 @@ def organize_images_and_annotations(df, images_dir, images_output_dir, annotatio
         class_name = row['class_name']
         
         if class_name == exclude_class:
-            continue
+            break
+            
         
         image_file = f"{image_id}.jpg"
         image_path = os.path.join(images_dir, image_file)
@@ -71,6 +72,8 @@ def organize_images_and_annotations(df, images_dir, images_output_dir, annotatio
     print("Images and annotations saved successfully.")
     print(f"Total images missing: {len(missing_files)}")
     return saved_files, missing_files
+
+
 
 def open_random_image(path):
     try:
@@ -116,6 +119,7 @@ def split_data(df, images_dir, output_dir, test_size=0.2, exclude_class="No find
     
     print(f"Data split into training and test sets. Train size: {len(train_df)}, Test size: {len(test_df)}")
     return train_df, test_df
+
 
 def main():
     bucket_name = 'deeplearning-mlops-demo'
