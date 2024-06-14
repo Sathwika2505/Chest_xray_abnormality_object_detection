@@ -34,7 +34,7 @@ def convert_row_to_xml(row, output_dir):
     xml_file_path = os.path.join(output_dir, f"{row['image_id']}.xml")
     tree.write(xml_file_path)
 
-def organize_images_and_annotations(df, images_dir, images_output_dir, annotations_output_dir):
+def organize_images_and_annotations(df, images_dir, images_output_dir, annotations_output_dir, exclude_class):
     if df is None:
         print("DataFrame is None. Exiting the function.")
         return
@@ -44,6 +44,11 @@ def organize_images_and_annotations(df, images_dir, images_output_dir, annotatio
     
     for index, row in df.iterrows():
         image_id = row['image_id']
+        class_name = row['class_name']
+        
+        if class_name == exclude_class:
+            continue
+        
         image_file = f"{image_id}.jpg"
         image_path = os.path.join(images_dir, image_file)
         
@@ -87,7 +92,10 @@ def save_random_images_from_each_class(base_dir, class_list):
         else:
             print(f"No image saved for class {class_name}")
 
-def split_data(df, images_dir, output_dir, test_size=0.2):
+def split_data(df, images_dir, output_dir, test_size=0.2, exclude_class="No finding"):
+    # Filter out rows where class_name is exclude_class
+    df = df[df['class_name'] != exclude_class]
+    
     train_df, test_df = train_test_split(df, test_size=test_size, stratify=df['class_name'], random_state=42)
     
     train_images_dir = os.path.join(output_dir, 'train', 'images')
@@ -100,8 +108,8 @@ def split_data(df, images_dir, output_dir, test_size=0.2):
     os.makedirs(test_images_dir, exist_ok=True)
     os.makedirs(test_annotations_dir, exist_ok=True)
     
-    organize_images_and_annotations(train_df, images_dir, train_images_dir, train_annotations_dir)
-    organize_images_and_annotations(test_df, images_dir, test_images_dir, test_annotations_dir)
+    organize_images_and_annotations(train_df, images_dir, train_images_dir, train_annotations_dir, exclude_class)
+    organize_images_and_annotations(test_df, images_dir, test_images_dir, test_annotations_dir, exclude_class)
     
     train_df.to_csv(os.path.join(output_dir, 'train', 'train.csv'), index=False)
     test_df.to_csv(os.path.join(output_dir, 'test', 'test.csv'), index=False)
@@ -116,7 +124,7 @@ def main():
     output_dir = 'organized_images'
     class_list = [
         "Aortic enlargement", "Atelectasis", "Calcification", "Cardiomegaly",
-        "Consolidation", "ILD", "Infiltration", "Lung Opacity", "No finding",
+        "Consolidation", "ILD", "Infiltration", "Lung Opacity", 
         "Nodule", "Other lesion", "Pleural effusion", "Pleural thickening",
         "Pneumothorax", "Pulmonary fibrosis"
     ]
@@ -128,7 +136,7 @@ def main():
     csv_df = read_csv_from_s3(bucket_name, csv_file_key)
 
     if csv_df is not None:
-        # Step 3: Split data into training and test sets
+        # Step 3: Split data into training and test sets, excluding "No finding" class
         train_df, test_df = split_data(csv_df, local_dir, output_dir)
 
         # Step 4: Save a random image from each class for the training set
