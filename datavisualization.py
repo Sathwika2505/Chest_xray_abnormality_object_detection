@@ -9,7 +9,7 @@ import pathlib
 import xml.etree.ElementTree as ET
 from data_extraction import extract_data
 from sklearn.model_selection import train_test_split
-import io 
+import io
 
 def read_csv_from_s3(bucket_name, csv_file_key):
     try:
@@ -34,6 +34,12 @@ def convert_row_to_xml(row, output_dir):
     xml_file_path = os.path.join(output_dir, f"{row['image_id']}.xml")
     tree.write(xml_file_path)
 
+def convert_row_to_txt(row, output_dir):
+    txt_file_path = os.path.join(output_dir, f"{row['image_id']}.txt")
+    with open(txt_file_path, 'w') as f:
+        for col in row.index:
+            f.write(f"{col}: {row[col]}\n")
+
 def organize_images_and_annotations(df, images_dir, images_output_dir, annotations_output_dir, exclude_class):
     if df is None:
         print("DataFrame is None. Exiting the function.")
@@ -49,22 +55,23 @@ def organize_images_and_annotations(df, images_dir, images_output_dir, annotatio
         if class_name == exclude_class:
             break
             
-        
         image_file = f"{image_id}.jpg"
         image_path = os.path.join(images_dir, image_file)
         
         if os.path.exists(image_path):
             # Ensure output directories exist
             pathlib.Path(images_output_dir).mkdir(parents=True, exist_ok=True)
-            pathlib.Path(annotations_output_dir).mkdir(parents=True, exist_ok=True)
+            pathlib.Path(os.path.join(annotations_output_dir, 'xml')).mkdir(parents=True, exist_ok=True)
+            pathlib.Path(os.path.join(annotations_output_dir, 'txt')).mkdir(parents=True, exist_ok=True)
             
             # Copy the image
             dest_image_path = os.path.join(images_output_dir, image_file)
             shutil.copy(image_path, dest_image_path)
             saved_files.append(dest_image_path)
             
-            # Create the corresponding XML file in the annotations directory
-            convert_row_to_xml(row, annotations_output_dir)
+            # Create the corresponding XML and TXT files in the annotations directory
+            convert_row_to_xml(row, os.path.join(annotations_output_dir, 'xml'))
+            convert_row_to_txt(row, os.path.join(annotations_output_dir, 'txt'))
         else:
             print(f"Image {image_file} not found in {images_dir}.")
             missing_files.append(image_file)
@@ -72,8 +79,6 @@ def organize_images_and_annotations(df, images_dir, images_output_dir, annotatio
     print("Images and annotations saved successfully.")
     print(f"Total images missing: {len(missing_files)}")
     return saved_files, missing_files
-
-
 
 def open_random_image(path):
     try:
@@ -120,12 +125,11 @@ def split_data(df, images_dir, output_dir, test_size=0.2, exclude_class="No find
     print(f"Data split into training and test sets. Train size: {len(train_df)}, Test size: {len(test_df)}")
     return train_df, test_df
 
-
 def main():
     bucket_name = 'deeplearning-mlops-demo'
     csv_file_key = 'train.csv'
     local_dir = "extracted_images/train"
-    output_dir = 'organized_images'
+    output_dir = 'new_images'
     class_list = [
         "Aortic enlargement", "Atelectasis", "Calcification", "Cardiomegaly",
         "Consolidation", "ILD", "Infiltration", "Lung Opacity", 
