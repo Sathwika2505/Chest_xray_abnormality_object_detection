@@ -40,6 +40,7 @@ def transform_data():
     
             print(f"Image path: {self.images_path}")
             print(f"Label path: {self.labels_path}")
+            print(f"Label path: {self.labels_txt}")
             print(f"Number of images: {len(self.all_images)}")
             if len(self.all_images) == 0:
                 print(f"No images found in {self.images_path}. Please check the directory.")
