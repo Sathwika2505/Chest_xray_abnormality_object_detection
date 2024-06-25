@@ -135,13 +135,6 @@ def transform_data():
         def __len__(self):
             return len(self.all_images)
 
-        def get_all_data(self):
-            data = []
-            for idx in range(len(self.all_images)):
-                image, target = self[idx]
-                data.append((image, target))
-            return data
-
     IMAGE_WIDTH = 800
     IMAGE_HEIGHT = 680
     classes = ['Aortic enlargement', 'Atelectasis', 'Calcification', 'Cardiomegaly', 'Consolidation', 'ILD', 'Infiltration', 'Lung Opacity', 'Nodule/Mass', 'Other lesion', 'Pleural effusion', 'Pleural thickening', 'Pneumothorax', 'Pulmonary fibrosis', 'No finding']
@@ -175,9 +168,9 @@ def transform_data():
 
     # Save datasets to PKL files
     with open('train_dataset.pkl', 'wb') as f:
-        pickle.dump(train_dataset.get_all_data(), f)
+        pickle.dump(train_dataset, f)
     with open('valid_dataset.pkl', 'wb') as f:
-        pickle.dump(valid_dataset.get_all_data(), f)
+        pickle.dump(valid_dataset, f)
 
     return train_dataset
 
