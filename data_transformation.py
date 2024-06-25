@@ -20,13 +20,14 @@ def transform_data():
         ])
 
     class CustomDataset(Dataset):
-        def __init__(self, images_path, labels_path, width, height, classes, transforms=None):
+        def __init__(self, images_path, labels_path, width, height, classes, transforms=None, directory):
             self.transforms = transforms
             self.images_path = images_path
             self.labels_path = labels_path
             self.height = height
             self.width = width
             self.classes = classes
+            self.directory = directory
             self.image_file_types = ['*.jpg', '*.jpeg', '*.png']
             self.all_image_paths = []
     
@@ -145,7 +146,8 @@ def transform_data():
         width=IMAGE_WIDTH,
         height=IMAGE_HEIGHT,
         classes=classes,
-        transforms=get_train_transform()
+        transforms=get_train_transform(),
+        directory = "organized_images"
     )
     print("Train Dataset:", len(train_dataset))
 
@@ -155,7 +157,8 @@ def transform_data():
         width=IMAGE_WIDTH,
         height=IMAGE_HEIGHT,
         classes=classes,
-        transforms=get_valid_transform()
+        transforms=get_valid_transform(),
+        directory = "organized_images"
     )
     print("Validation Dataset:", len(valid_dataset))
 
