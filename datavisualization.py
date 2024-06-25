@@ -129,7 +129,7 @@ def main():
     bucket_name = 'deeplearning-mlops-demo'
     csv_file_key = 'train.csv'
     local_dir = "extracted_images/train"
-    output_dir = 'new_images'
+    output_dir = 'organized_images'
     class_list = [
         "Aortic enlargement", "Atelectasis", "Calcification", "Cardiomegaly",
         "Consolidation", "ILD", "Infiltration", "Lung Opacity", 
