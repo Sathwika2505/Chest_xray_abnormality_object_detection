@@ -142,7 +142,8 @@ def transform_data():
 
     train_dataset = CustomDataset(
         images_path=os.path.join(os.getcwd(), "organized_images/train/images"),
-        labels_path=os.path.join(os.getcwd(), "organized_images/train/annotations"),
+        labels_path=os.path.join(os.getcwd(), "organized_images/train/annotations/xml"),
+        labels_txt=os.path.join(os.getcwd(), "organized_images/train/annotations/txt"),
         width=IMAGE_WIDTH,
         height=IMAGE_HEIGHT,
         classes=classes,
@@ -153,7 +154,8 @@ def transform_data():
 
     valid_dataset = CustomDataset(
         images_path=os.path.join(os.getcwd(), "organized_images/test/images"),
-        labels_path=os.path.join(os.getcwd(), "organized_images/test/annotations"),
+        labels_path=os.path.join(os.getcwd(), "organized_images/test/annotations/xml"),
+        labels_txt=os.path.join(os.getcwd(), "organized_images/test/annotations/txt"),
         width=IMAGE_WIDTH,
         height=IMAGE_HEIGHT,
         classes=classes,
