@@ -20,7 +20,7 @@ def transform_data():
         ])
 
     class CustomDataset(Dataset):
-        def __init__(self, images_path, labels_path, width, height, classes, transforms=None, directory):
+        def __init__(self, images_path, labels_path, width, height, classes, directory, transforms=None):
             self.transforms = transforms
             self.images_path = images_path
             self.labels_path = labels_path
