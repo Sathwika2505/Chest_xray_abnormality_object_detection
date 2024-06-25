@@ -1,50 +1,29 @@
-pipeline {
+pipeline{
+
     agent any
-    environment {
-        HEARTBEAT_CHECK_INTERVAL = 86400
+ 
+    stages{
+        stage("Extract Data"){
+            steps{
+                
+                sh 'python3.10 data_extraction.py'
+            }
+        }
+        stage("Visualize Data"){
+            steps{
+                sh 'python3.10 datavisualization.py'
+            }
+        }
+        stage("Transform Data"){
+            steps{
+                sh 'python3.10 data_transformation.py'
+            }
+        }
+
     }
-    stages {
-        stage("Extract Data") {
-            steps {
-                script {
-                    try {
-                        sh 'python3.10 data_extraction.py > extraction_log.txt 2>&1'
-                    } catch (Exception e) {
-                        error "Data extraction failed: ${e}"
-                    }
-                }
-            }
-        }
-
-        stage("Visualize Data") {
-            steps {
-                script {
-                    try {
-                        sh 'python3.10 datavisualization.py > visualization_log.txt 2>&1'
-                    } catch (Exception e) {
-                        error "Data visualization failed: ${e}"
-                    }
-                }
-            }
-        }
-
-        stage("Transform Data") {
-            steps {
-                script {
-                    try {
-                        sh 'python3.10 data_transformation.py > transformation_log.txt 2>&1'
-                    } catch (Exception e) {
-                        error "Data transformation failed: ${e}"
-                    }
-                }
-            }
-        }
-    }
-
-    post {
+    post{
         always {
             archiveArtifacts artifacts: 'train_dataset.pkl', onlyIfSuccessful: true
-            archiveArtifacts artifacts: 'extraction_log.txt, visualization_log.txt, transformation_log.txt', allowEmptyArchive: true
         }
     }
 }
