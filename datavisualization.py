@@ -134,7 +134,7 @@ def main():
         "Aortic enlargement", "Atelectasis", "Calcification", "Cardiomegaly",
         "Consolidation", "ILD", "Infiltration", "Lung Opacity", 
         "Nodule", "Other lesion", "Pleural effusion", "Pleural thickening",
-        "Pneumothorax", "Pulmonary fibrosis"
+        "Pneumothorax", "Pulmonary fibrosis", "No finding"
     ]
 
     # Step 1: Download and extract zip file
