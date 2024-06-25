@@ -25,22 +25,22 @@ def read_csv_from_s3(bucket_name, csv_file_key):
         print(f"Error downloading CSV file from S3: {e}")
         return None
 
-def convert_row_to_xml(row, output_dir):
+def convert_row_to_xml(row, output_dir, image_id):
     root = ET.Element("annotation")
     for col in row.index:
         child = ET.SubElement(root, col)
         child.text = str(row[col])
     tree = ET.ElementTree(root)
-    xml_file_path = os.path.join(output_dir, f"{row['image_id']}.xml")
+    xml_file_path = os.path.join(output_dir, f"{image_id}.xml")
     tree.write(xml_file_path)
 
-def convert_row_to_txt(row, output_dir):
-    txt_file_path = os.path.join(output_dir, f"{row['image_id']}.txt")
+def convert_row_to_txt(row, output_dir, image_id):
+    txt_file_path = os.path.join(output_dir, f"{image_id}.txt")
     with open(txt_file_path, 'w') as f:
         for col in row.index:
             f.write(f"{col}: {row[col]}\n")
 
-def organize_images_and_annotations(df, images_dir, images_output_dir, annotations_output_dir, exclude_class):
+def organize_images_and_annotations(df, images_dir, images_output_dir, annotations_output_dir):
     if df is None:
         print("DataFrame is None. Exiting the function.")
         return
@@ -52,9 +52,6 @@ def organize_images_and_annotations(df, images_dir, images_output_dir, annotatio
         image_id = row['image_id']
         class_name = row['class_name']
         
-        if class_name == exclude_class:
-            break
-            
         image_file = f"{image_id}.jpg"
         image_path = os.path.join(images_dir, image_file)
         
@@ -70,8 +67,8 @@ def organize_images_and_annotations(df, images_dir, images_output_dir, annotatio
             saved_files.append(dest_image_path)
             
             # Create the corresponding XML and TXT files in the annotations directory
-            convert_row_to_xml(row, os.path.join(annotations_output_dir, 'xml'))
-            convert_row_to_txt(row, os.path.join(annotations_output_dir, 'txt'))
+            convert_row_to_xml(row, os.path.join(annotations_output_dir, 'xml'), image_id)
+            convert_row_to_txt(row, os.path.join(annotations_output_dir, 'txt'), image_id)
         else:
             print(f"Image {image_file} not found in {images_dir}.")
             missing_files.append(image_file)
@@ -100,10 +97,7 @@ def save_random_images_from_each_class(base_dir, class_list):
         else:
             print(f"No image saved for class {class_name}")
 
-def split_data(df, images_dir, output_dir, test_size=0.2, exclude_class="No finding"):
-    # Filter out rows where class_name is exclude_class
-    df = df[df['class_name'] != exclude_class]
-    
+def split_data(df, images_dir, output_dir, test_size=0.2):
     train_df, test_df = train_test_split(df, test_size=test_size, stratify=df['class_name'], random_state=42)
     
     train_images_dir = os.path.join(output_dir, 'train', 'images')
@@ -116,14 +110,42 @@ def split_data(df, images_dir, output_dir, test_size=0.2, exclude_class="No find
     os.makedirs(test_images_dir, exist_ok=True)
     os.makedirs(test_annotations_dir, exist_ok=True)
     
-    organize_images_and_annotations(train_df, images_dir, train_images_dir, train_annotations_dir, exclude_class)
-    organize_images_and_annotations(test_df, images_dir, test_images_dir, test_annotations_dir, exclude_class)
+    organize_images_and_annotations(train_df, images_dir, train_images_dir, train_annotations_dir)
+    organize_images_and_annotations(test_df, images_dir, test_images_dir, test_annotations_dir)
     
     train_df.to_csv(os.path.join(output_dir, 'train', 'train.csv'), index=False)
     test_df.to_csv(os.path.join(output_dir, 'test', 'test.csv'), index=False)
     
     print(f"Data split into training and test sets. Train size: {len(train_df)}, Test size: {len(test_df)}")
     return train_df, test_df
+
+def count_matching_annotations(images_dir, annotations_dir):
+    image_files = [f for f in os.listdir(images_dir) if f.endswith('.jpg')]
+    xml_files = [f for f in os.listdir(os.path.join(annotations_dir, 'xml')) if f.endswith('.xml')]
+    txt_files = [f for f in os.listdir(os.path.join(annotations_dir, 'txt')) if f.endswith('.txt')]
+    
+    matched_count = 0
+    mismatched_count = 0
+    missing_annotations = []
+    
+    for image_file in image_files:
+        image_id = os.path.splitext(image_file)[0]
+        xml_file = f"{image_id}.xml"
+        txt_file = f"{image_id}.txt"
+        
+        if xml_file in xml_files and txt_file in txt_files:
+            matched_count += 1
+        else:
+            mismatched_count += 1
+            missing_annotations.append(image_file)
+    
+    print(f"Total images: {len(image_files)}")
+    print(f"Images with matching annotations: {matched_count}")
+    print(f"Images without matching annotations: {mismatched_count}")
+    if mismatched_count > 0:
+        print("Missing annotations for the following images:")
+        for missing in missing_annotations:
+            print(f"  - {missing}")
 
 def main():
     bucket_name = 'deeplearning-mlops-demo'
@@ -144,11 +166,18 @@ def main():
     csv_df = read_csv_from_s3(bucket_name, csv_file_key)
 
     if csv_df is not None:
-        # Step 3: Split data into training and test sets, excluding "No finding" class
+        # Step 3: Split data into training and test sets, including "No finding" class
         train_df, test_df = split_data(csv_df, local_dir, output_dir)
 
         # Step 4: Save a random image from each class for the training set
         save_random_images_from_each_class(os.path.join(output_dir, 'train', 'images'), class_list)
+        
+        # Step 5: Verify matching annotations
+        print("\nChecking annotations for train images:")
+        count_matching_annotations(os.path.join(output_dir, 'train', 'images'), os.path.join(output_dir, 'train', 'annotations'))
+        
+        print("\nChecking annotations for test images:")
+        count_matching_annotations(os.path.join(output_dir, 'test', 'images'), os.path.join(output_dir, 'test', 'annotations'))
 
 if __name__ == "__main__":
     main()
