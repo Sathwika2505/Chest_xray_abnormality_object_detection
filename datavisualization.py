@@ -37,8 +37,12 @@ def convert_row_to_xml(row, output_dir, image_id):
 def convert_row_to_txt(row, output_dir, image_id):
     txt_file_path = os.path.join(output_dir, f"{image_id}.txt")
     with open(txt_file_path, 'w') as f:
-        for col in row.index:
-            f.write(f"{col}: {row[col]}\n")
+        class_id = row['class_id']
+        x_min = row['x_min'] / 2048  # Assuming normalization for x_min
+        y_min = row['y_min'] / 2048  # Assuming normalization for y_min
+        x_max = row['x_max'] / 2048  # Assuming normalization for x_max
+        y_max = row['y_max'] / 2048  # Assuming normalization for y_max
+        f.write(f"{class_id} {x_min} {y_min} {x_max} {y_max}\n")
 
 def organize_images_and_annotations(df, images_dir, images_output_dir, annotations_output_dir):
     if df is None:
