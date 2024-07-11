@@ -126,7 +126,7 @@ def transform_data():
             target["image_id"] = image_id
     
             if self.transforms:
-                transformed = self.transforms(image=image_resized, bboxes=boxes, labels=labels)
+                transformed = self.transforms(image=image_resized)
                 image_resized = transformed['image']
                 target['boxes'] = torch.as_tensor(transformed['bboxes'], dtype=torch.float32)
                 target['labels'] = torch.as_tensor(transformed['labels'], dtype=torch.int64)
