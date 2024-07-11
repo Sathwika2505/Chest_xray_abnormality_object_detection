@@ -8,6 +8,7 @@ import xml.etree.ElementTree as ET
 import dill as pickle
 from torchvision import transforms
 import albumentations as A
+from albumentations.pytorch.transforms import ToTensorV2
 
 def transform_data():
     def get_train_transform():
