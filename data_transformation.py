@@ -12,10 +12,16 @@ from albumentations.pytorch.transforms import ToTensorV2
 
 def transform_data():
     def get_train_transform():
-        return A.Compose([ToTensorV2(),], bbox_params={'format': 'pascal_voc', 'label_fields': ['labels']})
+        return A.Compose([
+            A.Resize(IMAGE_HEIGHT, IMAGE_WIDTH),
+            ToTensorV2()
+        ], bbox_params=A.BboxParams(format='pascal_voc', label_fields=['labels']))
 
     def get_valid_transform():
-        return A.Compose([ToTensorV2(),], bbox_params={'format': 'pascal_voc', 'label_fields': ['labels']})
+        return A.Compose([
+            A.Resize(IMAGE_HEIGHT, IMAGE_WIDTH),
+            ToTensorV2()
+        ], bbox_params=A.BboxParams(format='pascal_voc', label_fields=['labels']))
 
     class CustomDataset(Dataset):
         def __init__(self, images_path, labels_path, labels_txt, width, height, classes, directory, transforms=None):
@@ -126,7 +132,7 @@ def transform_data():
             target["image_id"] = image_id
     
             if self.transforms:
-                transformed = self.transforms(image=image_resized)
+                transformed = self.transforms(image=image_resized, bboxes=boxes, labels=labels)
                 image_resized = transformed['image']
                 target['boxes'] = torch.as_tensor(transformed['bboxes'], dtype=torch.float32)
                 target['labels'] = torch.as_tensor(transformed['labels'], dtype=torch.int64)
@@ -151,7 +157,7 @@ def transform_data():
         height=IMAGE_HEIGHT,
         classes=classes,
         transforms=get_train_transform(),
-        directory = "organized_images"
+        directory="organized_images"
     )
     print("Train Dataset:", len(train_dataset))
 
@@ -163,7 +169,7 @@ def transform_data():
         height=IMAGE_HEIGHT,
         classes=classes,
         transforms=get_valid_transform(),
-        directory = "organized_images"
+        directory="organized_images"
     )
     print("Validation Dataset:", len(valid_dataset))
 
