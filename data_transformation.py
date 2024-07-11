@@ -7,17 +7,14 @@ from torch.utils.data import Dataset
 import xml.etree.ElementTree as ET
 import dill as pickle
 from torchvision import transforms
+import albumentations as A
 
 def transform_data():
     def get_train_transform():
-        return transforms.Compose([
-            transforms.ToTensor()
-        ])
+        return A.Compose([ToTensorV2(),], bbox_params={'format': 'pascal_voc', 'label_fields': ['labels']})
 
     def get_valid_transform():
-        return transforms.Compose([
-            transforms.ToTensor()
-        ])
+        return A.Compose([ToTensorV2(),], bbox_params={'format': 'pascal_voc', 'label_fields': ['labels']})
 
     class CustomDataset(Dataset):
         def __init__(self, images_path, labels_path, labels_txt, width, height, classes, directory, transforms=None):
