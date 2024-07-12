@@ -19,23 +19,14 @@ def transform_data():
                 brightness_limit=0.2, p=0.5
             ),
             A.ColorJitter(p=0.5),
-            # A.Rotate(limit=10, p=0.2),
             A.RandomGamma(p=0.2),
             A.RandomFog(p=0.2),
-            # A.RandomSunFlare(p=0.1),
-            # `RandomScale` for multi-res training,
-            # `scale_factor` should not be too high, else may result in 
-            # negative convolutional dimensions.
-            # A.RandomScale(scale_limit=0.15, p=0.1),
-            # A.Normalize(
-            #     (0.485, 0.456, 0.406),
-            #     (0.229, 0.224, 0.225)
-            # ),
             ToTensorV2(p=1.0),
         ], bbox_params={
             'format': 'pascal_voc',
             'label_fields': ['labels']
         })
+    
     def get_train_transform():
         return A.Compose([
             A.Resize(IMAGE_HEIGHT, IMAGE_WIDTH),
@@ -49,7 +40,7 @@ def transform_data():
         ], bbox_params=A.BboxParams(format='pascal_voc', label_fields=['labels']))
 
     class CustomDataset(Dataset):
-        def __init__(self, images_path, labels_path, use_train_aug=False, labels_txt, width, height, classes, directory, transforms=None):
+        def __init__(self, images_path, labels_path, labels_txt, width, height, classes, directory, transforms=None, use_train_aug=False):
             self.transforms = transforms
             self.images_path = images_path
             self.labels_path = labels_path
@@ -61,7 +52,6 @@ def transform_data():
             self.directory = directory
             self.image_file_types = ['*.jpg', '*.jpeg', '*.png']
             self.all_image_paths = []
-            
     
             # Get all the image paths in sorted order
             for file_type in self.image_file_types:
@@ -160,17 +150,14 @@ def transform_data():
     
             if self.use_train_aug: # Use train augmentation if argument is passed.
                 train_aug = get_train_aug()
-                sample = train_aug(image=image_resized,
-                                        bboxes=target['boxes'],
-                                        labels=labels)
+                sample = train_aug(image=image_resized, bboxes=target['boxes'].tolist(), labels=labels.tolist())
                 image_resized = sample['image']
                 target['boxes'] = torch.Tensor(sample['bboxes'])
             else:
-                sample = self.transforms(image=image_resized,
-                                        bboxes=target['boxes'],
-                                        labels=labels)
+                sample = self.transforms(image=image_resized, bboxes=target['boxes'].tolist(), labels=labels.tolist())
                 image_resized = sample['image']
                 target['boxes'] = torch.Tensor(sample['bboxes'])
+            
             if len(target['boxes']) == 0:
                 target['boxes'] = torch.zeros((0, 4), dtype=torch.float32)
     
